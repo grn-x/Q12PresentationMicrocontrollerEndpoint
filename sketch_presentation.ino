@@ -1,6 +1,7 @@
 #include <WiFi.h>
 #include <WebServer.h>
 #include <vector>
+#include <map>
 
 const char* ssid = "";
 const char* password = "";
@@ -14,6 +15,9 @@ int buttonState = 0;
 std::vector<String> taskOneClients;
 
 WebServer server(80);
+
+
+
 
 void handlePing() {
   String json = "{\"status\":\"alive\"}";
@@ -48,21 +52,84 @@ void task_one() {
 
 
 
+std::map<String, String> correctAnswers = {
+  {"c1", "5"},
+  {"c2", "active"},
+  {"c3", "obj"},
+  {"c4", "1"},
+  {"c5", "\"ALICE\""},
+  {"c6", "8"},
+  {"c7", "30"},
+  {"c9", "2"},
+  {"c10", "\"olleh\""},
+  {"c1b", "Equals"},
+  {"c2b", "Null"},
+  {"c3b", "Same"},
+  {"c4b", "ArrayEquals"},
+  {"c5b", "Equals"},
+  {"c6b", "True"},
+  {"c7b", "Equals"},
+  {"c9b", "Throws"},
+  {"c10b", "False"}
+};
+
+std::vector<String> taskAssertionsLog;
+
+void task_assertions() {
+  if (!server.hasArg("number") || !server.hasArg("param")) {
+    server.send(400, "application/json", "{\"error\": \"Missing required parameter 'number' or 'param'\"}");
+    return;
+  }
+
+  String number = server.arg("number");
+  String paramValue = server.arg("param");
+  String clientName = server.hasArg("name") ? server.arg("name") : "anonymous";
+  unsigned long timestamp = millis();
+
+  // Check if the number exists
+  if (correctAnswers.find(number) == correctAnswers.end()) {
+    server.send(404, "application/json", "{\"error\": \"Unknown problem number\"}");
+    return;
+  }
+
+  String correctAnswer = correctAnswers[number];
+
+  if (paramValue == correctAnswer) {
+    String logEntry = clientName + " solved " + number + " at " + String(timestamp / 1000) + "s";
+    taskAssertionsLog.push_back(logEntry);
+    server.send(200, "application/json", "{\"result\":true}");
+  } else {
+    server.send(200, "application/json", "{\"result\":false}");
+  }
+}
+
+
+
 void handleWebConsole() {
   if (!server.authenticate(consoleUser, consolePass)) {
     return server.requestAuthentication();
   }
 
-  String html = "<!DOCTYPE html><html><head>  <meta http-equiv="refresh" content="10"> <title>Admin Console</title></head><body>";
-  html += "<h1>Successful Task Completions</h1><ul>";
-
+  String html = "<!DOCTYPE html><html><head><meta http-equiv=\"refresh\" content=\"10\">";
+  html += "<title>Admin Console</title></head><body>";
+  
+  html += "<h1>Task One Completions</h1><ul>";
   for (String entry : taskOneClients) {
     html += "<li>" + entry + "</li>";
   }
+  html += "</ul>";
 
-  html += "</ul></body></html>";
+  html += "<h1>Assertion Task Log</h1><ul>";
+  for (String entry : taskAssertionsLog) {
+    html += "<li>" + entry + "</li>";
+  }
+  html += "</ul>";
+
+  html += "</body></html>";
+
   server.send(200, "text/html", html);
 }
+
 
 
 void handleResetButton(){
@@ -106,10 +173,12 @@ void setup() {
 
   Serial.print("Connected. IP: ");
   Serial.println(WiFi.localIP());
-
+  server.enableCORS();
   server.on("/ping", handlePing);
   server.on("/task_one", task_one);
     server.on("/login", handleWebConsole);
+    server.on("/assert", task_assertions);
+
   server.begin();
 }
 

@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Interactive Debugging CTF</title>
+  <style>
+  body {
+    font-family: Arial, sans-serif;
+    margin: 2rem auto;
+    background: #f9f9f9;
+    padding: 1rem 2rem;
+    border-radius: 8px;
+    box-shadow: 0 0 12px #ccc;
+  }
+  h1 {
+    text-align: center;
+    margin-bottom: 1rem;
+  }
+  h2 {
+    border-bottom: 2px solid #333;
+    padding-bottom: 0.3rem;
+    margin-bottom: 1rem;
+  }
+  .dictionary {
+    background: #eef4f7;
+    padding: 1rem 1.2rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+    font-size: 0.95rem;
+  }
+  .dictionary dt {
+    font-weight: bold;
+    margin-top: 0.5rem;
+  }
+  .dictionary dd {
+    margin: 0 0 0.7rem 1.5rem;
+  }
+  .challenges {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem 2rem;
+  }
+  .challenge {
+    background: #fff;
+    padding: 1rem 1.2rem;
+	margin: 1rem;
+    border-radius: 8px;
+    box-shadow: 0 0 8px #ccc;
+  }
+  .snippet {
+    background: #272822;
+    color: #f8f8f2;
+    padding: 1rem;
+    border-radius: 6px;
+    font-family: monospace;
+    white-space: pre-wrap;
+    margin-bottom: 0.7rem;
+    font-size: 0.9rem;
+  }
+  label {
+    font-weight: bold;
+  }
+  input[type="text"] {
+    font-family: monospace;
+    padding: 0.3rem 0.4rem;
+    margin-left: 0.3rem;
+    width: 140px;
+  }
+  button {
+    margin-left: 0.6rem;
+    padding: 0.3rem 0.8rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+    border-radius: 4px;
+    border: 1px solid #333;
+    background-color: #eee;
+  }
+  .answer {
+    margin-top: 0.5rem;
+    font-style: italic;
+    color: green;
+  }
+</style>
+</head>
+<body>
+  <h1>Interactive Debugging Capture The Flag</h1>
+  <p>Welcome! Start by entering your <strong>Client Name</strong> and <strong>Address</strong> below. Then solve the debugging puzzles!</p>
+
+  <section>
+    <label for="clientNameInput">Client Name:</label><br />
+    <input type="text" id="clientNameInput" placeholder="Enter name and hit Enter" /><br /><br />
+    <label for="addressInput">Address:</label><br />
+    <input type="text" id="addressInput" placeholder="Enter address and hit Enter" />
+  </section>
+
+  <hr />
+
+  <!-- Level 1: Find the flag in the console -->
+  <div class="challenge" id="c1">
+    <div class="snippet">
+      <code>/* Level 1: Open the console and find the logged flag! */</code>
+    </div>
+    <label>Find the flag printed in the console.</label>
+  </div>
+
+  <!-- Level 2: Inspect hidden variable through debugging -->
+  <div class="challenge" id="c2">
+    <div class="snippet" id="snippet2"></div>
+    <label>Set a breakpoint and inspect the variable <code>secretFlag</code> inside <code>revealSecret()</code>.</label><br />
+    <button onclick="checkAnswer('input2', 'c2')">Check</button><br />
+    <input type="text" id="input2" placeholder="Enter secretFlag value" />
+    <div class="answer" id="answer2"></div>
+  </div>
+
+  <!-- Level 3: Step through execution order -->
+  <div class="challenge" id="c3">
+    <div class="snippet" id="snippet3"></div>
+    <label>Step through <code>generateFlag()</code> and enter the final returned flag.</label><br />
+    <button onclick="checkAnswer('input3', 'c3')">Check</button><br />
+    <input type="text" id="input3" placeholder="Enter generated flag" />
+    <div class="answer" id="answer3"></div>
+  </div>
+
+  <!-- Level 4: Reverse the input to pass check -->
+  <div class="challenge" id="c4">
+    <div class="snippet">
+      <code>
+function check(input) {
+  if (input.split("").reverse().join("") === "gnirtsym") {
+    console.log("FLAG{conditional_success}");
+  }
+}
+      </code>
+    </div>
+    <label>Find the input string to get the flag.</label><br />
+    <input type="text" id="input4" placeholder="Enter input string" />
+    <button onclick="checkAnswer('input4', 'c4')">Check</button>
+    <div class="answer" id="answer4"></div>
+  </div>
+
+  <!-- Level 5: Monkey patch to pass antiDebug -->
+  <div class="challenge" id="c5">
+    <div class="snippet">
+      <code>
+function antiDebug() {
+  if (window.console && console.log.toString().indexOf("[native code]") === -1) {
+    return false;
+  }
+  return true;
+}
+
+if (antiDebug()) {
+  console.log("Try harder.");
+} else {
+  console.log("FLAG{you_monkey_patched_it}");
+}
+      </code>
+    </div>
+    <label>Override <code>console.log</code> to get the flag.</label><br />
+    <input type="text" id="input5" placeholder="Enter flag after monkey patch" />
+    <button onclick="checkAnswer('input5', 'c5')">Check</button>
+    <div class="answer" id="answer5"></div>
+  </div>
+
+  <script>
+  // -- needed for solution checking functionality
+    const NAME_KEY = 'Q12_presentation_name';
+    const ADDRESS_KEY = 'Q12_presentation_address';
+
+    const nameInput = document.getElementById('clientNameInput');
+    const addressInput = document.getElementById('addressInput');
+
+    window.addEventListener('DOMContentLoaded', () => {
+      if (sessionStorage.getItem(NAME_KEY)) {
+        nameInput.value = sessionStorage.getItem(NAME_KEY);
+      }
+      if (sessionStorage.getItem(ADDRESS_KEY)) {
+        addressInput.value = sessionStorage.getItem(ADDRESS_KEY);
+      }
+    });
+
+    nameInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        sessionStorage.setItem(NAME_KEY, nameInput.value.trim());
+        alert('Client name saved');
+      }
+    });
+
+    addressInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        sessionStorage.setItem(ADDRESS_KEY, addressInput.value.trim());
+        alert('Address saved');
+      }
+    });
+	
+	
+	async function checkAnswer(inputId, challengeId) {
+      const userInput = document.getElementById(inputId).value.trim();
+      const answerDiv = document.getElementById("answer" + challengeId.substring(1));
+
+      const clientName = sessionStorage.getItem(NAME_KEY) || "Unknown";
+      const espIp = sessionStorage.getItem(ADDRESS_KEY) || "127.0.0.1";
+
+      try {
+        const url = `http://${espIp}/assert?name=${encodeURIComponent(clientName)}&number=${encodeURIComponent(challengeId)}&param=${encodeURIComponent(userInput)}`;
+        const response = await fetch(url);
+
+        if (!response.ok) throw new Error("ESP32 responded with error");
+
+        const result = await response.json();
+
+        if (result.result === true) {
+          answerDiv.textContent = "✅ Correct!";
+          answerDiv.style.color = "green";
+        } else {
+          answerDiv.textContent = "❌ Incorrect. Try again!";
+          answerDiv.style.color = "red";
+        }
+      } catch (error) {
+        console.error("Error checking answer:", error);
+        answerDiv.textContent = "⚠️ Error contacting server.";
+        answerDiv.style.color = "orange";
+      }
+    }
+	
+// -- needed for solution checking functionality
+
+
+
+    // Challenge 1: log flag in console
+    console.log("FLAG{open_console_found_flag}");
+
+    // Challenge 2: inside function with breakpoints
+    function revealSecret() {
+      const secretFlag = "FLAG{debug_variable_inspected}";
+      return secretFlag;
+    }
+
+    // Display function code snippet for challenge 2 (for visibility, but no flag shown)
+    document.getElementById('snippet2').textContent = `
+function revealSecret() {
+  const secretFlag = "???"; // Inspect variable via debugger
+  return secretFlag;
+}
+`;
+
+    // periodically call revealSecret to allow breakpoint invocation
+    setInterval(() => {
+      revealSecret();
+    }, 5000);
+
+    // Challenge 3: step through generateFlag
+    function generateFlag() {
+      let part1 = "FLAG{";
+      let part2 = atob("c3RlcF9hbmRfc3RlcA=="); // "step_and_step"
+      let part3 = "_complete}";
+      return part1 + part2 + part3;
+    }
+
+    // Show snippet for challenge 3 (simplified)
+    document.getElementById('snippet3').textContent = `
+function generateFlag() {
+  let part1 = "FLAG{";
+  let part2 = atob("c3RlcF9hbmRfc3RlcA=="); // Base64 encoded string
+  let part3 = "_complete}";
+  return part1 + part2 + part3;
+}
+`;
+
+    // periodically call generateFlag to allow breakpoint invocation
+    setInterval(() => {
+      generateFlag();
+    }, 7000);
+
+
+  </script>
+</body>
+</html>
