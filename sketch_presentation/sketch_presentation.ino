@@ -3,10 +3,10 @@
 #include <vector>
 #include <map>
 
-const char* ssid = "CMF1";
-const char* password = "gluteeen";
-const char* consoleUser = "admin";
-const char* consolePass = "secret";
+const char* ssid = "";
+const char* password = "";
+const char* consoleUser = "";
+const char* consolePass = "";
 
 const int pinGreenLED = 27;
 const int pinButtonReset = 32; 
@@ -105,6 +105,50 @@ void task_assertions() {
 
 
 
+std::map<String, String> correctAnswersDebug = {
+  {"c1", "cft{solution_one}"},
+  {"c2", "secret"},
+  {"c3", "552575653"},
+  {"c4", "227086596"},
+  {"c5", "320200509"}
+};
+
+      //cft{solution_one}; c1
+      //secret c2
+      //end value //552575653 c3
+      //find out value at eecallstack: 227086596 c4
+      //what would the value be if c callstack was 468 -> 320200509 c5
+
+std::vector<String> taskDebugLog;
+void task_debug() {
+  if (!server.hasArg("number") || !server.hasArg("param")) {
+    server.send(400, "application/json", "{\"error\": \"Missing required parameter 'number' or 'param'\"}");
+    return;
+  }
+
+  String number = server.arg("number");
+  String paramValue = server.arg("param");
+  String clientName = server.hasArg("name") ? server.arg("name") : "anonymous";
+  unsigned long timestamp = millis();
+
+  // Check if the number exists
+  if (correctAnswersDebug.find(number) == correctAnswersDebug.end()) {
+    server.send(404, "application/json", "{\"error\": \"Unknown problem number\"}");
+    return;
+  }
+
+  String correctAnswer = correctAnswersDebug[number];
+
+  if (paramValue == correctAnswer) {
+    String logEntry = clientName + " solved " + number + " at " + String(timestamp / 1000) + "s";
+    taskDebugLog.push_back(logEntry);
+    server.send(200, "application/json", "{\"result\":true}");
+  } else {
+    server.send(200, "application/json", "{\"result\":false}");
+  }
+}
+
+
 void handleWebConsole() {
   if (!server.authenticate(consoleUser, consolePass)) {
     return server.requestAuthentication();
@@ -178,6 +222,7 @@ void setup() {
   server.on("/task_one", task_one);
     server.on("/login", handleWebConsole);
     server.on("/assert", task_assertions);
+    server.on("/debug", task_debug());
 
   server.begin();
 }
