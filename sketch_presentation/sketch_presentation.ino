@@ -3,10 +3,10 @@
 #include <vector>
 #include <map>
 
-const char* ssid = "";
-const char* password = "";
-const char* consoleUser = "";
-const char* consolePass = "";
+const char* ssid = "CMF1";
+const char* password = "gluteeen";
+const char* consoleUser = "admin";
+const char* consolePass = "secret";
 
 const int pinGreenLED = 27;
 const int pinButtonReset = 32; 
