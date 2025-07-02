@@ -3,8 +3,8 @@
 #include <vector>
 #include <map>
 
-const char* ssid = "";
-const char* password = "";
+String ssid = ""; //const char*
+String password = ""; //const char*
 const char* consoleUser = "";
 const char* consolePass = "";
 
@@ -16,7 +16,53 @@ std::vector<String> taskOneClients;
 
 WebServer server(80);
 
+void handleResetButton(){
+  buttonState = digitalRead(pinButtonReset);
+  if(buttonState ==LOW){
+    delay(200);  // debounce delay
+    Serial.println("Reset-Button pressed");
+    ESP.restart();
+  }
+}
 
+void readVars(String *var1, String *var2) {
+  String input = "";
+  unsigned long lastPrintTime = millis();
+
+  while (input.length() == 0) {
+    if (millis() - lastPrintTime >= 5000) {
+      Serial.println("Waiting for enter...");
+      lastPrintTime = millis();
+    }
+    handleResetButton();
+
+    if (Serial.available()) {
+      input = Serial.readStringUntil('\n');
+      input.trim(); 
+
+      if (input.length() == 0) {
+        Serial.println("Empty input received. Use preconfiguration");
+        return;
+      }
+    }
+  }
+
+  // Find delimiter "\ \"
+  String delimiter = "\\ \\";
+
+  int delimIndex = input.indexOf(delimiter);
+
+  if (delimIndex == -1) {
+    // No delimiter found; only one word
+    *var1 = input;
+    //*var2 = "";
+  } else {
+    *var1 = input.substring(0, delimIndex);
+    *var2 = input.substring(delimIndex + delimiter.length());
+    (*var1).trim();
+    (*var2).trim();
+  }
+}
 
 
 void handlePing() {
@@ -97,6 +143,7 @@ void task_assertions() {
   if (paramValue == correctAnswer) {
     String logEntry = clientName + " solved " + number + " at " + String(timestamp / 1000) + "s";
     taskAssertionsLog.push_back(logEntry);
+    Serial.println(logEntry);
     server.send(200, "application/json", "{\"result\":true}");
   } else {
     server.send(200, "application/json", "{\"result\":false}");
@@ -142,6 +189,7 @@ void task_debug() {
   if (paramValue == correctAnswer) {
     String logEntry = clientName + " solved " + number + " at " + String(timestamp / 1000) + "s";
     taskDebugLog.push_back(logEntry);
+    Serial.println(logEntry);
     server.send(200, "application/json", "{\"result\":true}");
   } else {
     server.send(200, "application/json", "{\"result\":false}");
@@ -176,32 +224,32 @@ void handleWebConsole() {
 
 
 
-void handleResetButton(){
-  buttonState = digitalRead(pinButtonReset);
-  if(buttonState ==LOW){
-    delay(200);  // debounce delay
-    Serial.println("Reset-Button pressed");
-    ESP.restart();
-  }
-}
+
 
 void setup() {
   Serial.begin(115200);
 
-  Serial.println("Setup Executed");
   pinMode(pinGreenLED, OUTPUT);
   digitalWrite(pinGreenLED, HIGH);
   //for led
   pinMode(pinButtonReset, INPUT_PULLUP);
 
+  Serial.println("ESP32 ready. Use preconfigured wifi (press enter), or input ssid and key separated by \"\\ \\\" and then press enter:");
 
-  WiFi.begin(ssid, password);
+  readVars(&ssid, &password);
+  Serial.print("SSID: ");
+  Serial.println(ssid);
+  Serial.print("Password: ");
+  Serial.println(password);
+
+  //WiFi.begin(ssid, password);
+  WiFi.begin(ssid.c_str(), password.c_str());
   int wifiDisconnectCounter = 0;
   while (WiFi.status() != WL_CONNECTED) {
     wifiDisconnectCounter ++;
-    delay(500);
-    Serial.println("Connecting...");
-    Serial.print(WiFi.status());
+    delay(1000);
+    Serial.print("Connecting...");
+    Serial.println(WiFi.status());
 
     handleResetButton();
 
@@ -209,7 +257,8 @@ void setup() {
       wifiDisconnectCounter = 0;
       Serial.println("Resetting wifi");
         WiFi.disconnect();
-        WiFi.begin(ssid, password);
+        //WiFi.begin(ssid, password);
+        WiFi.begin(ssid.c_str(), password.c_str());
 
     }
 
@@ -222,7 +271,7 @@ void setup() {
   server.on("/task_one", task_one);
     server.on("/login", handleWebConsole);
     server.on("/assert", task_assertions);
-    server.on("/debug", task_debug());
+    server.on("/debug", task_debug);
 
   server.begin();
 }
